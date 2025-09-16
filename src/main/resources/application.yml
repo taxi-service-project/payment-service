@@ -1,5 +1,5 @@
 server:
-  port: 8083
+  port: 8086
 
 spring:
   application:
@@ -32,3 +32,9 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       properties:
         spring.json.trusted.packages: "*"
+
+services:
+  pricing-service:
+    url: http://localhost:8087
+  user-service:
+    url: http://localhost:8081
