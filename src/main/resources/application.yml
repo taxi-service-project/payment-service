@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: matching-service
+    name: payment-service
   datasource:
     url: jdbc:h2:mem:testdb
     driverClassName: org.h2.Driver
