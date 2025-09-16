@@ -2,7 +2,9 @@ package com.example.payment_service.service;
 
 import com.example.payment_service.client.PricingServiceClient;
 import com.example.payment_service.client.UserServiceClient;
+import com.example.payment_service.dto.PaymentResponse;
 import com.example.payment_service.entity.Payment;
+import com.example.payment_service.exception.PaymentNotFoundException;
 import com.example.payment_service.kafka.PaymentKafkaProducer;
 import com.example.payment_service.kafka.dto.PaymentCompletedEvent;
 import com.example.payment_service.kafka.dto.TripCompletedEvent;
@@ -10,6 +12,7 @@ import com.example.payment_service.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -61,6 +64,16 @@ public class PaymentService {
                     kafkaProducer.sendPaymentCompletedEvent(paymentEvent);
                 })
                 .then();
+    }
+
+    @Transactional(readOnly = true)
+    public PaymentResponse getPaymentByTripId(Long tripId) {
+        log.info("tripId로 결제 내역 조회 시작. Trip ID: {}", tripId);
+        Payment payment = paymentRepository.findByTripId(tripId)
+                                           .orElseThrow(() -> new PaymentNotFoundException("해당 tripId의 결제 내역을 찾을 수 없습니다: " + tripId));
+
+        log.info("결제 내역 조회 성공. Payment ID: {}", payment.getId());
+        return PaymentResponse.fromEntity(payment);
     }
 
 }
