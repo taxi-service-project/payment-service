@@ -17,7 +17,7 @@ public class InternalPaymentController {
     private final PaymentService paymentService;
 
     @GetMapping
-    public ResponseEntity<PaymentResponse> getPaymentByTripId(@RequestParam Long tripId) {
+    public ResponseEntity<PaymentResponse> getPaymentByTripId(@RequestParam String tripId) {
         PaymentResponse response = paymentService.getPaymentByTripId(tripId);
         return ResponseEntity.ok(response);
     }

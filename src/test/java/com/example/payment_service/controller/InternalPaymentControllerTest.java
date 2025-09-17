@@ -31,15 +31,15 @@ class InternalPaymentControllerTest {
     @DisplayName("GET /internal/api/payments - 성공")
     void getPaymentByTripId_Success() throws Exception {
         // given
-        long tripId = 1L;
-        PaymentResponse mockResponse = new PaymentResponse(1L, tripId, 15000,
+        String tripId = "024c3b55-8a7e-4b68-a364-6b45a1953b5b";
+        PaymentResponse mockResponse = new PaymentResponse("d71344e5-1302-462f-8d6f-5a6433324237", tripId, 15000,
                 PaymentStatus.COMPLETED, "dummy-tx-id", LocalDateTime.now(), LocalDateTime.now());
 
         when(paymentService.getPaymentByTripId(tripId)).thenReturn(mockResponse);
 
         // when & then
         mockMvc.perform(get("/internal/api/payments")
-                       .param("tripId", String.valueOf(tripId)))
+                       .param("tripId", tripId))
                .andExpect(status().isOk())
                .andExpect(jsonPath("$.tripId").value(tripId))
                .andExpect(jsonPath("$.status").value("COMPLETED"));
@@ -49,13 +49,13 @@ class InternalPaymentControllerTest {
     @DisplayName("GET /internal/api/payments - 실패 (404 Not Found)")
     void getPaymentByTripId_Fail_NotFound() throws Exception {
         // given
-        long tripId = 99L;
+        String tripId = "024c3b55-8a7e-4b68-a364-6b45a1953b5c";
         when(paymentService.getPaymentByTripId(tripId))
                 .thenThrow(new PaymentNotFoundException("결제 내역 없음"));
 
         // when & then
         mockMvc.perform(get("/internal/api/payments")
-                       .param("tripId", String.valueOf(tripId)))
+                       .param("tripId", tripId))
                .andExpect(status().isNotFound());
     }
 }

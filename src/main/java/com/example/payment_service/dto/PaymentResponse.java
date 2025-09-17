@@ -5,8 +5,8 @@ import com.example.payment_service.entity.PaymentStatus;
 import java.time.LocalDateTime;
 
 public record PaymentResponse(
-        Long id,
-        Long tripId,
+        String paymentId,
+        String tripId,
         Integer amount,
         PaymentStatus status,
         String pgTransactionId,
@@ -15,7 +15,7 @@ public record PaymentResponse(
 ) {
     public static PaymentResponse fromEntity(Payment payment) {
         return new PaymentResponse(
-                payment.getId(),
+                payment.getPaymentId(),
                 payment.getTripId(),
                 payment.getAmount(),
                 payment.getStatus(),

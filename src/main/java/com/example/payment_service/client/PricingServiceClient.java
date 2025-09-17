@@ -17,7 +17,7 @@ public class PricingServiceClient {
         this.webClient = builder.baseUrl(serviceUrl).build();
     }
 
-    public Mono<FareResponse> calculateFare(Long tripId, Integer distance, Integer duration, LocalDateTime timestamp) {
+    public Mono<FareResponse> calculateFare(String tripId, Integer distance, Integer duration, LocalDateTime timestamp) {
         return webClient.get()
                         .uri(uriBuilder -> uriBuilder
                                 .path("/internal/api/pricing/calculate")

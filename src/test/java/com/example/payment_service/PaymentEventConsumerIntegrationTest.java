@@ -61,15 +61,16 @@ class PaymentEventConsumerIntegrationTest {
     @Test
     @DisplayName("TripCompleted 이벤트를 수신하면, 외부 서비스 호출 및 가상 결제 후 PaymentCompleted 이벤트를 발행한다")
     void handleTripCompletedEvent_Success() {
-        // given: 테스트 시나리오 설정
-        TripCompletedEvent event = new TripCompletedEvent(1L, 101L, 5000, 1200, LocalDateTime.now());
+        String tripId = "024c3b55-8a7e-4b68-a364-6b45a1953b5b";
+        String userId = "a2a2122c-29d9-4769-9412-a3e34a1b9b9a";
+        TripCompletedEvent event = new TripCompletedEvent(tripId, userId, 5000, 1200, LocalDateTime.now());
 
         // 가격 서비스는 15000원을 반환하도록 설정
         when(pricingServiceClient.calculateFare(any(), any(), any(), any()))
                 .thenReturn(Mono.just(new PricingServiceClient.FareResponse(15000)));
         // 사용자 서비스는 결제수단 ID 1L을 반환하도록 설정
-        when(userServiceClient.getDefaultPaymentMethod(101L))
-                .thenReturn(Mono.just(new UserServiceClient.PaymentMethodResponse(1L)));
+        when(userServiceClient.getUserInfoForPayment(userId))
+                .thenReturn(Mono.just(new UserServiceClient.UserInfoForPaymentResponse(userId, "test-user", "test@email.com", "pm_test", "bk_test")));
 
         // when: 테스트의 시작점. trip_events 토픽으로 메시지를 발행
         kafkaTemplate.send("trip_events", event);
@@ -81,7 +82,7 @@ class PaymentEventConsumerIntegrationTest {
         verify(kafkaProducer, timeout(5000)).sendPaymentCompletedEvent(eventCaptor.capture());
 
         PaymentCompletedEvent capturedEvent = eventCaptor.getValue();
-        assertThat(capturedEvent.tripId()).isEqualTo(1L);
+        assertThat(capturedEvent.tripId()).isEqualTo(tripId);
         assertThat(capturedEvent.fare()).isEqualTo(15000);
 
         // 2. DB에 Payment 데이터가 최종적으로 COMPLETED 상태로 저장되었는지 검증
@@ -93,6 +94,8 @@ class PaymentEventConsumerIntegrationTest {
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
             assertThat(payment.getAmount()).isEqualTo(15000);
             assertThat(payment.getPgTransactionId()).isNotNull();
+            assertThat(payment.getTripId()).isEqualTo(tripId);
+            assertThat(payment.getUserId()).isEqualTo(userId);
         });
     }
 }

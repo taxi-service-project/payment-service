@@ -10,17 +10,17 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class UserServiceClient {
     private final WebClient webClient;
-    public record PaymentMethodResponse(Long id) {}
+    public record UserInfoForPaymentResponse(String userId, String userName, String userEmail, String paymentMethodId, String billingKey) {}
 
     public UserServiceClient(WebClient.Builder builder, @Value("${services.user-service.url}") String serviceUrl) {
         this.webClient = builder.baseUrl(serviceUrl).build();
     }
 
-    public Mono<PaymentMethodResponse> getDefaultPaymentMethod(Long userId) {
+    public Mono<UserInfoForPaymentResponse> getUserInfoForPayment(String userId) {
         return webClient.get()
                         .uri("/internal/api/users/{userId}/payment-methods/default", userId)
                         .retrieve()
-                        .bodyToMono(PaymentMethodResponse.class)
+                        .bodyToMono(UserInfoForPaymentResponse.class)
                         .doOnError(e -> log.error("결제수단 조회 실패. userId: {}", userId, e));
     }
 }

@@ -1,6 +1,6 @@
 package com.example.payment_service.kafka.dto;
 
 public record PaymentCompletedEvent(
-        Long tripId,
+        String tripId,
         Integer fare
 ) {}
