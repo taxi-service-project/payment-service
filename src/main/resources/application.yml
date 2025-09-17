@@ -33,6 +33,24 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
 
+resilience4j:
+  circuitbreaker:
+    instances:
+      pricing-service:
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 10
+        sliding-window-type: count-based
+        sliding-window-size: 20
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 5
+      user-service:
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 10
+        sliding-window-type: count-based
+        sliding-window-size: 20
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 5
+
 services:
   pricing-service:
     url: http://localhost:8087

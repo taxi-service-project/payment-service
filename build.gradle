@@ -20,8 +20,18 @@ configurations {
 	}
 }
 
+ext {
+	set('springCloudVersion', "2023.0.1")
+}
+
 repositories {
 	mavenCentral()
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+	}
 }
 
 dependencies {
@@ -44,6 +54,10 @@ dependencies {
 	testImplementation 'org.testcontainers:testcontainers'
 	testImplementation 'org.testcontainers:junit-jupiter'
 	testImplementation 'org.springframework.kafka:spring-kafka-test'
+
+	implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j'
+	implementation 'org.springframework.boot:spring-boot-starter-aop'
+	implementation 'io.github.resilience4j:resilience4j-reactor'
 }
 
 tasks.named('test') {
