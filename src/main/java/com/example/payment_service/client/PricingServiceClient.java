@@ -1,5 +1,6 @@
 package com.example.payment_service.client;
 
+import com.example.payment_service.exception.PricingServiceUnavailableException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -28,6 +29,9 @@ public class PricingServiceClient {
                                 .build())
                         .retrieve()
                         .bodyToMono(FareResponse.class)
-                        .doOnError(e -> log.error("가격 조회 실패. tripId: {}", tripId, e));
+                        .onErrorResume(e -> {
+                            log.error("가격 조회 중 오류 발생. tripId: {}", tripId, e);
+                            return Mono.error(new PricingServiceUnavailableException("가격 조회 서비스 이용 불가"));
+                        });
     }
 }

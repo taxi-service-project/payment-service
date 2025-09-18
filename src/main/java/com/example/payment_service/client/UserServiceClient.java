@@ -1,5 +1,6 @@
 package com.example.payment_service.client;
 
+import com.example.payment_service.exception.UserServiceUnavailableException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,9 @@ public class UserServiceClient {
                         .uri("/internal/api/users/{userId}/payment-methods/default", userId)
                         .retrieve()
                         .bodyToMono(UserInfoForPaymentResponse.class)
-                        .doOnError(e -> log.error("결제수단 조회 실패. userId: {}", userId, e));
+                        .onErrorResume(e -> {
+                            log.error("결제수단 조회 중 오류 발생. userId: {}", userId, e);
+                            return Mono.error(new UserServiceUnavailableException("사용자 서비스 이용 불가"));
+                        });
     }
 }
