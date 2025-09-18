@@ -53,9 +53,9 @@ resilience4j:
 
 services:
   pricing-service:
-    url: http://localhost:8087
+    url: http://localhost:8080/pricing
   user-service:
-    url: http://localhost:8081
+    url: http://localhost:8080/user
 
 eureka:
   client:
