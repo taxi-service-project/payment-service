@@ -19,19 +19,25 @@ spring:
   kafka:
     bootstrap-servers: 192.168.1.100:9092
     producer:
+      acks: all
+      retries: 2147483647 # 재시도 횟수. Integer.MAX_VALUE로 무제한 설정
+      delivery-timeout-ms: 120000
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       properties:
-        linger.ms: 5
-        batch.size: 30000
-        buffer.memory: 30000000
+        linger.ms: 50 # 메시지를 모아서 보내는 시간
+        batch.size: 131072 # 128KB
+        buffer.memory: 33554432 # 32MB
+        request.timeout.ms: 30000
     consumer:
       group-id: payment-service-group
       auto-offset-reset: earliest
+      enable-auto-commit: false
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       properties:
         spring.json.trusted.packages: "*"
+        max.poll.records: 500
 
 resilience4j:
   circuitbreaker:
