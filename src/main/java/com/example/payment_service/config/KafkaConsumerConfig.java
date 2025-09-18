@@ -2,6 +2,8 @@ package com.example.payment_service.config;
 
 import com.example.payment_service.exception.PaymentNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.DataAccessException;
@@ -11,10 +13,11 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.messaging.converter.MessageConversionException;
-import org.springframework.util.backoff.ExponentialBackOff;
+import org.springframework.util.backoff.FixedBackOff;
 import org.springframework.web.client.ResourceAccessException;
 
 @Configuration
+@Slf4j
 @RequiredArgsConstructor
 public class KafkaConsumerConfig {
 
@@ -22,10 +25,29 @@ public class KafkaConsumerConfig {
 
     @Bean
     public DefaultErrorHandler errorHandler() {
-        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate);
-        ExponentialBackOff backOff = new ExponentialBackOff(1000L, 2.0);
-        backOff.setMaxElapsedTime(10000L); // 최대 10초까지 재시도
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(
+                kafkaTemplate,
+                (ConsumerRecord<?, ?> record, Exception ex) ->
+                        new org.apache.kafka.common.TopicPartition(
+                                record.topic() + ".DLT",
+                                record.partition()
+                        )
+        );
+
+        FixedBackOff backOff = new FixedBackOff(1000L, 3);
+
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
+
+        errorHandler.setRetryListeners((record, ex, attempt) ->
+                log.warn(
+                        "Kafka 레코드 재시도 시도 #{} → topic={} / partition={} / offset={} / error={}",
+                        attempt,
+                        record.topic(),
+                        record.partition(),
+                        record.offset(),
+                        ex.getMessage()
+                )
+        );
 
         // 재시도할 오류: 네트워크, DB 일시적 오류
         errorHandler.addRetryableExceptions(ResourceAccessException.class, DataAccessException.class);
@@ -47,6 +69,7 @@ public class KafkaConsumerConfig {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.setCommonErrorHandler(errorHandler);
+        factory.setConcurrency(3); // 병렬 처리 스레드 수 설정 (파티션 3개)
         return factory;
     }
 }
