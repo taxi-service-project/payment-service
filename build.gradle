@@ -57,6 +57,8 @@ dependencies {
 
 	implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.0.2'
 	implementation 'io.github.resilience4j:resilience4j-reactor'
+
+	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 }
 
 tasks.named('test') {
