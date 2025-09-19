@@ -30,12 +30,13 @@ spring:
     consumer:
       group-id: payment-service-group
       auto-offset-reset: earliest
-      enable-auto-commit: false
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       properties:
         spring.json.trusted.packages: "*"
         max.poll.records: 500
+      listener:
+        ack-mode: MANUAL_IMMEDIATE
 
 resilience4j:
   circuitbreaker:
