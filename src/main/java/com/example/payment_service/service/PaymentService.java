@@ -11,10 +11,6 @@ import com.example.payment_service.kafka.dto.PaymentCompletedEvent;
 import com.example.payment_service.kafka.dto.PaymentFailedEvent;
 import com.example.payment_service.kafka.dto.TripCompletedEvent;
 import com.example.payment_service.repository.PaymentRepository;
-import io.github.resilience4j.circuitbreaker.CircuitBreaker;
-import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
-import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,33 +27,25 @@ public class PaymentService {
     private final PricingServiceClient pricingServiceClient;
     private final UserServiceClient userServiceClient;
     private final PaymentKafkaProducer kafkaProducer;
-    private final CircuitBreakerRegistry circuitBreakerRegistry;
     private final PaymentTransactionService paymentTransactionService;
-
-    private CircuitBreaker pricingCircuitBreaker;
-    private CircuitBreaker userCircuitBreaker;
-
-    @PostConstruct
-    public void init() {
-        pricingCircuitBreaker = circuitBreakerRegistry.circuitBreaker("pricing-service");
-        userCircuitBreaker = circuitBreakerRegistry.circuitBreaker("user-service");
-    }
 
     public Mono<Void> processPayment(TripCompletedEvent event) {
 
         Mono<PricingServiceClient.FareResponse> fareMono = pricingServiceClient.calculateFare(
-                                                                                       event.tripId(), event.distanceMeters(), event.durationSeconds(), event.endedAt())
-                                                                               .transform(CircuitBreakerOperator.of(pricingCircuitBreaker));
+                event.tripId(), event.distanceMeters(), event.durationSeconds(), event.endedAt());
 
-        Mono<UserServiceClient.UserInfoForPaymentResponse> userInfoMono = userServiceClient.getUserInfoForPayment(event.userId())
-                                                                                           .transform(CircuitBreakerOperator.of(userCircuitBreaker));
+        Mono<UserServiceClient.UserInfoForPaymentResponse> userInfoMono = userServiceClient.getUserInfoForPayment(event.userId());
 
         return Mono.zip(fareMono, userInfoMono)
                    .flatMap(tuple -> {
                        Integer fare = tuple.getT1().fare();
                        UserServiceClient.UserInfoForPaymentResponse userInfo = tuple.getT2();
 
-                       // 분리된 Transactional 서비스의 메소드를 호출
+                       if (fare < 0) {
+                           log.warn("폴백(Fallback) 요금을 수신했습니다. Trip ID: {}. 결제를 중단합니다.", event.tripId());
+                           return Mono.error(new RuntimeException("가격 조회 서비스 폴백이 트리거되었습니다."));
+                       }
+
                        return Mono.fromCallable(() -> paymentTransactionService.saveAndProcessPayment(event, userInfo, fare))
                                   .subscribeOn(Schedulers.boundedElastic());
                    })
@@ -68,7 +56,7 @@ public class PaymentService {
                        }
                    })
                    .onErrorResume(error -> {
-                       log.error("결제 처리 파이프라인 최종 오류 발생. Trip ID: {}", event.tripId(), error);
+                       log.error("결제 처리 파이프라인에서 최종 오류가 발생했습니다. Trip ID: {}", event.tripId(), error);
                        PaymentFailedEvent failedEvent = new PaymentFailedEvent(event.tripId(), error.getMessage());
                        kafkaProducer.sendPaymentFailedEvent(failedEvent);
                        return Mono.empty();

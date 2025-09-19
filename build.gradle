@@ -55,8 +55,7 @@ dependencies {
 	testImplementation 'org.testcontainers:junit-jupiter'
 	testImplementation 'org.springframework.kafka:spring-kafka-test'
 
-	implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.0.2'
-	implementation 'io.github.resilience4j:resilience4j-reactor'
+	implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
 
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 }
