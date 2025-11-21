@@ -45,34 +45,29 @@ public class PaymentService {
                        var userInfo = tuple.getT2();
 
                        if (fare < 0) {
-                           log.warn("폴백 요금 감지. Trip ID: {}. 결제 중단.", event.tripId());
                            return Mono.error(new RuntimeException("가격 서비스 폴백 트리거됨"));
                        }
 
                        return Mono.fromCallable(() ->
                                           paymentTransactionService.createPendingPayment(
                                                   event, userInfo.userId(), userInfo.paymentMethodId(), fare
-                                          )
-                                  )
+                                          ))
                                   .subscribeOn(Schedulers.boundedElastic())
                                   .flatMap(payment -> processPgAndComplete(payment));
                    })
-                   // Kafka 이벤트 발행 (성공 시)
-                   .doOnSuccess(payment -> {
-                       if (payment != null && payment.getStatus() == PaymentStatus.COMPLETED) {
+                   .flatMap(payment -> {
+                       if (payment.getStatus() == PaymentStatus.COMPLETED) {
                            PaymentCompletedEvent paymentEvent = new PaymentCompletedEvent(
                                    payment.getTripId(), payment.getAmount(), payment.getUserId());
-                           kafkaProducer.sendPaymentCompletedEvent(paymentEvent);
+                           return kafkaProducer.sendPaymentCompletedEvent(paymentEvent);
                        }
+                       return Mono.empty();
                    })
-                   // Kafka 이벤트 발행 (최종 실패 시)
                    .onErrorResume(error -> {
                        log.error("결제 파이프라인 최종 실패. Trip ID: {}", event.tripId(), error);
                        PaymentFailedEvent failedEvent = new PaymentFailedEvent(event.tripId(), error.getMessage());
-                       kafkaProducer.sendPaymentFailedEvent(failedEvent);
-                       return Mono.empty();
-                   })
-                   .then();
+                       return kafkaProducer.sendPaymentFailedEvent(failedEvent).then(Mono.empty());
+                   });
     }
 
     private Mono<Payment> processPgAndComplete(Payment payment) {
