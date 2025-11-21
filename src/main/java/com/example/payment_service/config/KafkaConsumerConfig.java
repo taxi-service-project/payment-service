@@ -72,4 +72,25 @@ public class KafkaConsumerConfig {
         factory.setConcurrency(3); // 병렬 처리 스레드 수 설정 (파티션 3개)
         return factory;
     }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, Object> dltKafkaListenerContainerFactory(
+            ConsumerFactory<String, Object> consumerFactory) {
+
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory);
+        factory.setConcurrency(1);
+
+        DefaultErrorHandler dltErrorHandler = new DefaultErrorHandler(
+                new FixedBackOff(2000L, 3L) // 2초 간격 3번 재시도
+        );
+
+        dltErrorHandler.setRetryListeners((record, ex, attempt) ->
+                log.warn("[DLT 처리 실패] 재시도 중... ({})", attempt)
+        );
+
+        factory.setCommonErrorHandler(dltErrorHandler);
+
+        return factory;
+    }
 }

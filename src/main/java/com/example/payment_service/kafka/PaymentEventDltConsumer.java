@@ -23,7 +23,7 @@ public class PaymentEventDltConsumer {
     @KafkaListener(
             topics = "trip_events.DLT",
             groupId = "${spring.kafka.consumer.group-id}.dlt",
-            containerFactory = "kafkaListenerContainerFactory",
+            containerFactory = "dltKafkaListenerContainerFactory",
             concurrency = "3"
     )
     @Transactional
