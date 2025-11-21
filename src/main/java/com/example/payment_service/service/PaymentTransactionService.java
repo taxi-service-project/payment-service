@@ -1,13 +1,12 @@
 package com.example.payment_service.service;
 
-import com.example.payment_service.client.UserServiceClient;
-import com.example.payment_service.client.VirtualPGClient;
 import com.example.payment_service.entity.Payment;
 import com.example.payment_service.kafka.dto.TripCompletedEvent;
 import com.example.payment_service.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
@@ -18,29 +17,34 @@ import java.util.UUID;
 public class PaymentTransactionService {
 
     private final PaymentRepository paymentRepository;
-    private final VirtualPGClient virtualPGClient;
 
-    @Transactional
-    public Payment saveAndProcessPayment(TripCompletedEvent event, UserServiceClient.UserInfoForPaymentResponse userInfo, Integer fare) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Payment createPendingPayment(TripCompletedEvent event, String userId, String paymentMethodId, Integer fare) {
         Payment payment = Payment.builder()
                                  .tripId(event.tripId())
-                                 .userId(userInfo.userId())
-                                 .paymentMethodId(userInfo.paymentMethodId())
+                                 .userId(userId)
+                                 .paymentMethodId(paymentMethodId)
                                  .amount(fare)
                                  .build();
-        paymentRepository.save(payment);
-        log.info("결제 요청 기록 저장 완료. Payment ID: {}", payment.getId());
 
-        try {
-            virtualPGClient.processPayment();
+        Payment savedPayment = paymentRepository.save(payment);
+        log.info("결제 요청 기록 저장(PENDING). Payment ID: {}", savedPayment.getId());
+        return savedPayment;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Payment updatePaymentStatus(Long paymentId, boolean isSuccess, String errorMessage) {
+        Payment payment = paymentRepository.findById(paymentId)
+                                           .orElseThrow(() -> new RuntimeException("결제 정보 유실 (ID: " + paymentId + ")"));
+
+        if (isSuccess) {
             payment.complete("dummy-tx-" + UUID.randomUUID());
-            log.info("결제 완료 처리. Payment ID: {}", payment.getId());
-        } catch (Exception e) {
+            log.info("결제 완료 처리(COMPLETED). Payment ID: {}", paymentId);
+        } else {
             payment.fail();
-            log.warn("가상 결제 처리 실패. Payment ID: {}", payment.getId(), e);
-            paymentRepository.save(payment); // 실패 상태도 DB에 저장
-            throw new RuntimeException(e);
+            log.warn("결제 실패 처리(FAILED). Payment ID: {}, Reason: {}", paymentId, errorMessage);
         }
+
         return paymentRepository.save(payment);
     }
 }
