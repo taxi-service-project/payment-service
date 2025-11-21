@@ -5,17 +5,18 @@ spring:
   application:
     name: payment-service
   datasource:
-    url: jdbc:h2:mem:testdb
-    driverClassName: org.h2.Driver
-    username: sa
+    url:
+    driverClassName:
+    username:
     password: 
-  h2:
-    console:
-      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+
   data:
     redis:
-      host: localhost
-      port: 6379
+      host:
+      port:
   kafka:
     bootstrap-servers: 192.168.1.100:9092
     producer:
@@ -35,8 +36,8 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
         max.poll.records: 500
-    listener:
-      ack-mode: MANUAL_IMMEDIATE
+      listener:
+        ack-mode: MANUAL_IMMEDIATE
 
 resilience4j:
   circuitbreaker:
@@ -58,9 +59,9 @@ resilience4j:
 
 services:
   pricing-service:
-    url: http://localhost:8080/pricing
+    url: http://pricing-service
   user-service:
-    url: http://localhost:8080/user
+    url: http://user-service
 
 eureka:
   client:
