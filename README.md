@@ -1,29 +1,39 @@
-# MSA 기반 Taxi 호출 플랫폼 - Payment Service
+# 💰 Payment Service
 
-Taxi 호출 플랫폼의 **결제 처리**를 담당하는 핵심 마이크로서비스입니다. Kafka로부터 `TripCompletedEvent`를 수신하면, 외부 서비스와 연동하여 요금을 계산하고 사용자 결제 정보를 조회한 후, 가상 PG(Payment Gateway)를 통해 결제를 시도합니다. 최종 결제 성공/실패 결과를 다시 Kafka 이벤트로 발행합니다.
+> **결제 승인 처리 및 정산 데이터를 관리하며, 외부 PG사(가상)와의 안전한 통신을 담당하는 마이크로서비스입니다.**
 
-## 주요 기능 및 워크플로우
+## 🛠 Tech Stack
+| Category | Technology |
+| :--- | :--- |
+| **Language** | **Java 17** |
+| **Framework** | Spring Boot (WebFlux) |
+| **Database** | MySQL (JPA) |
+| **Messaging** | Apache Kafka |
 
-1.  **운행 완료 이벤트 수신 (`PaymentEventConsumer`):**
-    * `trip_events` Kafka 토픽을 구독하여 `TripCompletedEvent`를 수신합니다.
-    * Reactive 파이프라인을 사용하여 비동기적으로 결제 처리를 시작합니다.
-    * 메시지 처리 성공 시 오프셋을 수동으로 커밋합니다. 실패 시 Kafka의 `DefaultErrorHandler`가 재시도를 처리합니다.
-2.  **요금 계산 및 사용자 정보 조회 (`PaymentService`):**
-    * **Pricing Service** (`PricingServiceClient`)를 호출하여 운행 거리/시간 기반의 요금을 조회합니다.
-    * **User Service** (`UserServiceClient`)를 호출하여 결제에 필요한 사용자 정보를 조회합니다.
-    * `Mono.zip`을 사용하여 두 외부 호출 결과를 조합합니다.
-3.  **결제 시도 및 상태 저장 (`PaymentTransactionService`):**
-    * 결제 요청 정보를 DB(Payment 테이블)에 `PENDING` 상태로 우선 저장합니다.
-    * **Virtual Payment Gateway**를 호출하여 실제 결제를 시도합니다.
-    * 결과에 따라 Payment 상태를 `COMPLETED` 또는 `FAILED`로 업데이트하고 DB에 저장합니다.
-4.  **결제 결과 이벤트 발행 (`PaymentKafkaProducer`):**
-    * 결제가 성공하면 `PaymentCompletedEvent`를 `payment_events` 토픽으로 발행합니다.
-    * 결제 처리 중 최종 오류 발생 시 `PaymentFailedEvent`를 `payment_events` 토픽으로 발행합니다.
-5.  **최종 실패 메시지 처리 (`PaymentEventDltConsumer`):**
-    * `trip_events.DLT` 토픽을 구독하여, 여러 번의 재시도 후에도 최종 실패한 `TripCompletedEvent` 메시지를 수신합니다.
-    * 실패한 메시지의 내용을 DB(FailedEvent 테이블)에 영구 저장하여 추후 분석 및 수동 처리가 가능하도록 합니다.
+## 📡 API Specification
 
-## 기술 스택 (Technology Stack)
+### Payment Operations
+| Method | URI | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `POST` | `/api/payments` | 🔐 | 결제 승인 요청 |
+| `GET` | `/api/payments/{tripId}` | 🔐 | 특정 여정의 결제 내역 조회 |
 
-* **Language & Framework:** Java, Spring Boot, **Spring WebFlux/Reactor**
-* **Messaging:** Spring Kafka
+### Event Consumers (Kafka)
+* **`TripCompletedEvent`**: 운행 종료 이벤트를 수신하여 자동으로 결제 프로세스를 시작합니다.
+
+## 🚀 Key Improvements (핵심 기술적 개선)
+
+### 1. Transaction Separation (트랜잭션 분리)
+* **Long Transaction 방지:** 외부 PG사 API 호출(Network I/O)이 DB 트랜잭션을 점유하여 커넥션 풀이 고갈되는 문제를 해결하기 위해, **`PaymentTransactionService`를 분리**하고 `REQUIRES_NEW`를 적용했습니다.
+* **구조:** **[DB 생성] → [PG 호출(No Tx)] → [DB 업데이트]** 순서로 트랜잭션을 물리적으로 격리하여 외부 장애가 내부 DB 리소스에 영향을 주지 않도록 설계했습니다.
+
+### 2. WebFlux Parallel Processing
+* **병렬 호출:** 결제 승인 전 필요한 **'요금 계산(Pricing Service)'**과 **'유저 정보 조회(User Service)'**를 순차적으로 호출하지 않고, **WebFlux `Mono.zip`**을 사용하여 동시에 호출함으로써 전체 결제 지연 시간(Latency)을 단축하도록 개선했습니다.
+
+
+
+
+----------
+
+## 아키텍쳐
+<img width="2324" height="1686" alt="Image" src="https://github.com/user-attachments/assets/81a25ff9-ee02-4996-80d3-f9217c3b7750" />
