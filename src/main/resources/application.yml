@@ -50,23 +50,23 @@ resilience4j:
         failure-rate-threshold: 50
         minimum-number-of-calls: 10
         sliding-window-type: count-based
-        sliding-window-size: 20
+        sliding-window-size: 100
         wait-duration-in-open-state: 15s
         permitted-number-of-calls-in-half-open-state: 5
       user-service:
         failure-rate-threshold: 50
         minimum-number-of-calls: 10
         sliding-window-type: count-based
-        sliding-window-size: 20
+        sliding-window-size: 100
         wait-duration-in-open-state: 15s
         permitted-number-of-calls-in-half-open-state: 5
   timelimiter:
     instances:
       pricing-service:
-        timeout-duration: 3s
+        timeout-duration: 1s
         cancel-running-future: true
       user-service:
-        timeout-duration: 3s
+        timeout-duration: 1s
         cancel-running-future: true
 
 services:
