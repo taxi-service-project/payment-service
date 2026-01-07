@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 환경 변수 정의 -->
+    <property name="SERVICE_NAME" value="payment-service"/>
+    <property name="ENV" value="dev"/>
+    <property name="LOG_DIR" value="logs/${SERVICE_NAME}-${ENV}"/>
+    <property name="LOG_FILE" value="${LOG_DIR}/application.log"/>
+
+    <!-- Logstash 호스트/포트 환경 변수 -->
+    <property name="LOGSTASH_HOST" value="logstash-input.elk.svc.cluster.local"/>
+    <property name="LOGSTASH_PORT" value="5044"/>
+
+    <!-- Logstash로 JSON 전송 -->
+    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>${LOGSTASH_HOST}:${LOGSTASH_PORT}</destination>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app":"${SERVICE_NAME}","env":"${ENV}"}</customFields>
+        </encoder>
+    </appender>
+
+    <!-- 콘솔 출력 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSS'Z', UTC} %-5level [${SERVICE_NAME},%X{traceId:-},%X{spanId:-}] [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 파일 출력 -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/application.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSS'Z', UTC} %-5level [${SERVICE_NAME},%X{traceId:-},%X{spanId:-}] [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Root Logger -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="LOGSTASH"/>
+    </root>
+</configuration>
