@@ -42,6 +42,10 @@ spring:
           com.example.trip_service.kafka.dto.TripCompletedEvent:com.example.payment_service.kafka.dto.TripCompletedEvent
     listener:
       ack-mode: RECORD
+      observation-enabled: true
+    template:
+      observation-enabled: true
+
 
 resilience4j:
   circuitbreaker:
