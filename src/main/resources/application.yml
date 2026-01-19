@@ -40,9 +40,7 @@ spring:
         max.poll.records: 500
         spring.json.type.mapping: >
           com.example.trip_service.kafka.dto.TripCompletedEvent:com.example.payment_service.kafka.dto.TripCompletedEvent
-    listener:
-      ack-mode: RECORD
-      observation-enabled: true
+
     template:
       observation-enabled: true
 

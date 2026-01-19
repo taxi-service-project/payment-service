@@ -9,6 +9,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,40 +26,31 @@ public class PaymentEventDltConsumer {
     @KafkaListener(
             topics = "trip_events.DLT",
             groupId = "${spring.kafka.consumer.group-id}.dlt",
-            containerFactory = "dltKafkaListenerContainerFactory",
-            concurrency = "3"
+            containerFactory = "dltKafkaListenerContainerFactory"
     )
     @Transactional
-    public void consumeDlt(String message, Acknowledgment ack) {
-        log.warn("[DLT] 최종 실패 메시지 수신: {}", message);
+    public void consumeDlt(
+            @Payload String message,
+            @Header(KafkaHeaders.RECEIVED_TOPIC) String originalDltTopic,
+            @Header(value = "kafka_dlt_exception_message", required = false) String exceptionMessage
+    ) {
+        log.warn("[DLT 수신] 토픽: {}, 메시지: {}", originalDltTopic, message);
 
-        String errorMessage;
-
-        try {
-            TripCompletedEvent event = objectMapper.readValue(message, TripCompletedEvent.class);
-            errorMessage = "DLT 재처리 성공. 원인: 비즈니스 로직 실패";
-            log.info("[DLT] 파싱 성공, 최종 실패 메시지 저장. Trip ID: {}", event.tripId());
-
-        } catch (JsonProcessingException e) {
-            errorMessage = "JSON 파싱 실패";
-            log.error("[DLT] JSON 파싱 실패, 메시지 영구 저장: {}", message, e);
+        if (exceptionMessage == null) {
+            exceptionMessage = "Unknown Error";
         }
 
         FailedEvent failedEvent = FailedEvent.builder()
+                                             .topic(originalDltTopic)
                                              .payload(message)
-                                             .topic("trip_events.DLT")
-                                             .errorMessage(truncate(errorMessage, 500))
+                                             .errorMessage(truncate(exceptionMessage, 1000))
                                              .build();
-        failedEventRepository.save(failedEvent);
 
-        ack.acknowledge();
-        log.info("[DLT] 메시지 처리 완료. 오프셋 커밋");
+        failedEventRepository.save(failedEvent);
     }
 
-    private String truncate(String message, int maxLen) {
-        if (message == null) {
-            return null;
-        }
-        return message.length() <= maxLen ? message : message.substring(0, maxLen);
+    private String truncate(String str, int max) {
+        if (str == null) return "";
+        return str.length() > max ? str.substring(0, max) : str;
     }
 }
