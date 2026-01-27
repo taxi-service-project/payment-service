@@ -51,7 +51,8 @@ dependencies {
 
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'io.micrometer:micrometer-tracing-bridge-brave'
-	implementation 'io.micrometer:micrometer-tracing-reporter-zipkin'
+	implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+	implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
 
 	testImplementation 'io.projectreactor:reactor-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -59,6 +60,7 @@ dependencies {
 	testImplementation 'org.testcontainers:testcontainers'
 	testImplementation 'org.testcontainers:junit-jupiter'
 	testImplementation 'org.springframework.kafka:spring-kafka-test'
+	testImplementation 'com.h2database:h2'
 
 	implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
 
