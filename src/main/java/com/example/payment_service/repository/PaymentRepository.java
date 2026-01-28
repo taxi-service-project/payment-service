@@ -1,11 +1,14 @@
 package com.example.payment_service.repository;
 
 import com.example.payment_service.entity.Payment;
+import com.example.payment_service.entity.PaymentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
@@ -16,5 +19,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Payment p SET p.status = 'PROCESSING' WHERE p.id = :id AND p.status = 'REQUESTED'")
     int tryStartProcessing(@Param("id") Long id);
+
+    List<Payment> findByStatusAndUpdatedAtBefore(PaymentStatus status, LocalDateTime cutoffTime);
 
 }

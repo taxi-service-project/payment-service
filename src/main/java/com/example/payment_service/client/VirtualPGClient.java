@@ -29,6 +29,13 @@ public class VirtualPGClient {
         log.info("🔄 [Virtual-PG] 결제 취소(환불) 승인 완료. 대상 TxID: {}", pgTransactionId);
     }
 
+    // 결제 상태 조회 (크로스 체크용)
+    public String getStatus(String pgTransactionId) {
+        simulateNetworkLatency();
+        // 시뮬레이션: 50% 확률로 결제됨, 50% 확률로 미결제(취소됨/없음)
+        return Math.random() < 0.5 ? "PAID" : "CANCELED";
+    }
+
     private void simulateNetworkLatency() {
         try {
             Thread.sleep(500); // 0.5초 지연
