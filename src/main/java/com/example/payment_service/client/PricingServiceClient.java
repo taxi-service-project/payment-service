@@ -40,12 +40,13 @@ public class PricingServiceClient {
                                               .bodyToMono(FareResponse.class)
                                               .onErrorResume(e -> {
                                                   log.error("가격 조회 중 원본 오류 발생. tripId: {}", tripId, e);
-                                                  return Mono.error(new PricingServiceUnavailableException("가격 조회 서비스 호출 실패"));
+                                                  return Mono.error(new PricingServiceUnavailableException("가격 조회 서비스 호출 실패", e));
                                               });
 
         return circuitBreaker.run(apiCall, throwable -> {
-            log.warn("가격 조회 서비스 서킷 브레이커가 열렸습니다. tripId: {}. 폴백 요금을 사용합니다.", tripId, throwable);
-            return Mono.just(new FareResponse(FALLBACK_FARE));
+            // 서킷이 열렸을 때도 -1이 아니라 에러를 던져야 함
+            log.warn("가격 서비스 서킷 OPEN. tripId: {}", tripId);
+            return Mono.error(new PricingServiceUnavailableException("가격 서비스 서킷 차단됨 (잠시 후 재시도 필요)", throwable));
         });
     }
 }

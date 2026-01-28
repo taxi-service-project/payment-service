@@ -65,4 +65,9 @@ public class Payment extends BaseTimeEntity {
     public void fail() {
         this.status = PaymentStatus.FAILED;
     }
+
+    public void unknown(String pgTransactionId) {
+        this.status = PaymentStatus.UNKNOWN;
+        this.pgTransactionId = pgTransactionId;
+    }
 }
