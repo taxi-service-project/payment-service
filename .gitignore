@@ -35,3 +35,22 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# 1. 로그 파일
+*.log
+logs/
+**/logs/
+**/application.log
+
+# 2. OS 임시 파일
+.DS_Store
+Thumbs.db
+
+# 3. 로컬 환경 설정 및 보안
+application-local.yml
+application-dev.yml
+*.env
+.secret/
+
+# 4. 기타 도구
+.history/
