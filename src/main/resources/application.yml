@@ -1,9 +1,12 @@
 server:
   port: 8086
+  shutdown: graceful
 
 spring:
   application:
     name: payment-service
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   datasource:
     url:
     driverClassName:
