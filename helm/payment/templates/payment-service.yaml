@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ .Values.spring.labels }}-service"
+spec:
+  selector:
+    app: "{{ .Values.spring.labels }}"
+  ports:
+    - protocol: TCP
+      port: {{ .Values.spring.service.port }}
+      targetPort: {{ .Values.spring.service.payment.port }}

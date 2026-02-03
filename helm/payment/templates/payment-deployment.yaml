@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Values.spring.labels }}-deployment"
+  labels:
+    app: "{{ .Values.spring.labels }}"
+
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: 3
+  {{- end }}
+  selector:
+    matchLabels:
+      app: "{{ .Values.spring.labels }}"
+  template:
+    metadata:
+      labels:
+        app: "{{ .Values.spring.labels }}"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.spring.service.payment.port }}"
+        prometheus.io/path: "/actuator/prometheus"
+        rollme: {{ randAlphaNum 5 | quote }}
+    spec:
+      terminationGracePeriodSeconds: 60
+      nodeSelector:
+        role: app
+      containers:
+        - name: "{{ .Values.spring.labels }}"
+          image: "{{ .Values.spring.image.repository }}:{{ .Values.spring.image.tag }}"
+          imagePullPolicy: Always
+          # Ingress 라우팅 제외될 때까지 시간 벌어주기
+          lifecycle:
+            preStop:
+              exec:
+                command: [ "/bin/sh", "-c", "sleep 20" ]
+
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: {{ .Values.spring.datasource.url | quote }}
+            - name: SPRING_DATASOURCE_USERNAME
+              value: {{ .Values.spring.datasource.username | quote }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: {{ .Values.spring.datasource.password | quote }}
+
+            - name: SPRING_REDIS_HOST
+              value: {{ .Values.spring.redis.host | quote }}
+            - name: SPRING_REDIS_PORT
+              value: {{ .Values.spring.redis.port | quote }}
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.spring.kafka.bootstrapServers | quote }}
+
+            - name: PRICING_SERVICE_URL
+              value: {{ .Values.spring.external.pricingUrl | quote }}
+            - name: USER_SERVICE_URL
+              value: {{ .Values.spring.external.userUrl | quote }}
+
+            - name: ZIPKIN_ENDPOINT
+              value: {{ .Values.spring.zipkin.endpoint | quote }}
+            - name: EUREKA_DEFAULT_ZONE
+              value: {{ .Values.spring.eureka.url | quote }}
+
+          ports:
+            - containerPort: {{ .Values.spring.service.payment.port }}
+          resources:
+            requests:
+              cpu: "200m"    # 0.2 vCPU
+              memory: "400Mi"
+            limits:
+              cpu: "400m"    # 0.4 vCPU
+              memory: "800Mi"
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: {{ .Values.spring.service.payment.port }}
+            initialDelaySeconds: 45 # Spring 뜨는 시간 고려해서 넉넉히
+            periodSeconds: 10
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: {{ .Values.spring.service.payment.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
