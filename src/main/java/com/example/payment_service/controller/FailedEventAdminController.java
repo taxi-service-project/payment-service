@@ -6,7 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/admin/failed-events")
+@RequestMapping("/api/payments/admin/failed-events")
 @RequiredArgsConstructor
 public class FailedEventAdminController {
 
