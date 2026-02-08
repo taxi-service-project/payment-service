@@ -27,8 +27,8 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       properties:
         enable.idempotence: true
-        linger.ms: 50 # 메시지를 모아서 보내는 시간
-        batch.size: 131072 # 128KB
+        linger.ms: 0
+        batch.size: 32768 # 32KB
         delivery-timeout-ms: 120000
         request.timeout.ms: 30000
     consumer:
@@ -40,7 +40,7 @@ spring:
         spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
         spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
         spring.json.trusted.packages: "*"
-        max.poll.records: 500
+        max.poll.records: 50
         spring.json.type.mapping: >
           com.example.trip_service.kafka.dto.TripCompletedEvent:com.example.payment_service.kafka.dto.TripCompletedEvent
 
