@@ -23,13 +23,15 @@ spring:
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
+      acks: all
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       properties:
         enable.idempotence: true
-        linger.ms: 0
-        batch.size: 32768 # 32KB
-        delivery-timeout-ms: 120000
+        delivery.timeout.ms: 120000
+        linger.ms: 10
+        batch.size: 130000
+        compression-type: zstd # 압축
         request.timeout.ms: 30000
     consumer:
       group-id: payment-service-group
@@ -39,7 +41,9 @@ spring:
       properties:
         spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
         spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.use.type.headers: true
         spring.json.trusted.packages: "*"
+        max.poll.interval.ms: 600000
         max.poll.records: 50
         spring.json.type.mapping: >
           com.example.trip_service.kafka.dto.TripCompletedEvent:com.example.payment_service.kafka.dto.TripCompletedEvent
