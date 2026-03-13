@@ -36,7 +36,7 @@ public class UserServiceClient {
 
         return circuitBreaker.run(apiCall, throwable -> {
             log.warn("사용자 서비스 서킷 브레이커가 열렸습니다. userId: {}. 결제 프로세스를 중단합니다.", userId, throwable);
-            return Mono.error(new UserServiceUnavailableException("사용자 서비스 이용 불가"));
+            return Mono.error(new UserServiceUnavailableException("사용자 서비스 이용 불가", throwable));
         });
     }
 }
